@@ -117,13 +117,15 @@ run_one <- function(n_items, design, rep, n_subj = 300) {
 
 if (sys.nframe() == 0) {
   args <- commandArgs(trailingOnly = TRUE)
+  # parallel workers; each large run peaks near 1.7 GB, so keep this modest
+  n_cores <- as.integer(Sys.getenv("SIM_CORES", "4"))
   reps <- if (length(args)) as.integer(args[1]) else 20
   designs <- if (length(args) > 1) strsplit(args[2], ",")[[1]] else c("2021", "balanced", "informative")
   out_file <- if (length(args) > 2) args[3] else "local/sims/reliability_results.csv"
   grid <- expand_grid(n_items = c(6, 8, 10, 12, 15, 20, 30, 40), design = designs, rep = seq_len(reps))
   res <- mclapply(seq_len(nrow(grid)), function(k) {
     tryCatch(run_one(grid$n_items[k], grid$design[k], grid$rep[k]), error = function(e) NULL)
-  }, mc.cores = 12)
+  }, mc.cores = n_cores, mc.preschedule = FALSE)
   results <- bind_rows(res)
   dir.create("local/sims", recursive = TRUE, showWarnings = FALSE)
   write_csv(results, out_file)
